@@ -288,3 +288,7 @@ Rozšíření přepisuje nebo doplňuje tyto metody OpenPonku a Specu. Při pře
 - Původní příkazy Model > Verification ukazují výsledky v Inspectoru a obarvují obrysy prvků. Tyto barvy se ukládají do `.opp`, proto je studentům lepší nedoporučovat.
 - Export PNG z OpenPonku po změně velikosti plátna občas vykreslí jen výřez: Roassal obnoví kreslicí plochu až během kreslení a OpenPonk mezitím posune kameru. MCP proto před exportem nastaví morphu cílovou velikost a plochu obnoví předem.
 - Prázdný UML balíček bez profilů si OpenPonk přiřadí k pluginu „OntoUML UFO-A“. Projekt založený jako „UML Class Editor“ se proto v `list_projects` hlásí jako OntoUML (stejně se chová i GUI).
+
+## Licence
+
+MIT, viz [LICENSE](LICENSE). Upravené metody OpenPonku a Specu (viz [Úpravy mimo vlastní balíčky](#úpravy-mimo-vlastní-balíčky)) vycházejí z jejich původního kódu, který je také pod licencí MIT.
