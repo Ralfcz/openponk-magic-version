@@ -230,7 +230,7 @@ OPMcpTools >> buildDefinitions [
 		  (self
 			   tool: 'set_properties'
 			   description:
-			   'Change properties of an element, e.g. {"name": "Person", "isAbstract": true}. Any property the element''s model has (with a setter) can be set to a string, number, boolean or null. Special properties: "type" (UML attribute or parameter type given by the name of a class, enumeration or primitive type), "multiplicity" (UML attribute, e.g. "0..*", "1", "*", "1...3", real bounds such as "0.5..2.5") and "stereotype" (name of a stereotype of the model''s profile, e.g. OntoUML "Kind", "Role", "Mediation"; null removes it).'
+			   'Change properties of an element, e.g. {"name": "Person", "isAbstract": true}. Any property the element''s model has (with a setter) can be set to a string, number, boolean or null. Special properties: "type" (UML attribute or parameter type given by the name of a class, enumeration, primitive type or common type such as Date; another name creates a data type in the CommonTypes package, an empty string or null clears the type), "multiplicity" (UML attribute, e.g. "0..*", "1", "*", "1...3", real bounds such as "0.5..2.5") and "stereotype" (name of a stereotype of the model''s profile, e.g. OntoUML "Kind", "Role", "Mediation"; null removes it).'
 			   arguments: {
 					   project.
 					   diagram.
@@ -1042,27 +1042,25 @@ OPMcpTools >> setProperties: arguments [
 { #category : 'private' }
 OPMcpTools >> setProperty: aName to: aValue of: aController [
 
-	| model viewModel newValue command |
+	| model viewModel command |
 	model := aController model.
 	viewModel := aController viewModel.
 	aName = 'multiplicity' ifTrue: [
 		^ self setMultiplicity: aValue of: aController ].
 	aName = 'stereotype' ifTrue: [ ^ self setStereotype: aValue of: aController ].
+	(aName = 'type' and: [ (aValue isNil or: [ aValue isString ]) and: [ viewModel respondsTo: #typeNamed: ] ])
+		ifTrue: [ ^ self setType: aValue of: aController ].
 	((model respondsTo: aName asSymbol) and: [ model respondsTo: aName asSymbol asMutator ])
 		ifFalse: [ OPMcpToolError signal: (self describe: aController) , ' has no property "' , aName , '"' ].
-	newValue := aValue.
-	(aName = 'type' and: [ aValue isString and: [ viewModel respondsTo: #typeNamed: ] ]) ifTrue: [
-		newValue := (viewModel typeNamed: aValue) ifNil: [
-			            OPMcpToolError signal: 'No type named "' , aValue , '"' ] ].
-	(newValue isNil or: [
-		 newValue isString or: [
-			 newValue isNumber or: [ newValue == true or: [ newValue == false or: [ aName = 'type' ] ] ] ] ])
+	(aValue isNil or: [
+		 aValue isString or: [
+			 aValue isNumber or: [ aValue == true or: [ aValue == false ] ] ] ])
 		ifFalse: [ OPMcpToolError signal: 'Value of "' , aName , '" must be a string, number, boolean or null' ].
 	command := OPPropertyChangeCommand
 		           viewModel: viewModel
 		           selector: aName asSymbol
 		           oldValue: (model perform: aName asSymbol)
-		           newValue: newValue.
+		           newValue: aValue.
 	aController undoManager
 		ifNil: [ command execute ]
 		ifNotNil: [ :undoManager | undoManager execute: command ]
@@ -1112,6 +1110,26 @@ OPMcpTools >> setStereotype: aNameOrNil of: aController [
 	(OPDiagramBuilder on: aController diagramController)
 		setStereotypeNamed: aNameOrNil
 		of: aController
+]
+
+{ #category : 'private' }
+OPMcpTools >> setType: aNameOrNil of: aController [
+	"UML type given by name; undoable through the accessor of the properties form. The form finds or creates the type by name, clears it on an empty name and removes custom types nobody uses any more, so undo and redo have to work by name too."
+
+	| viewModel description command |
+	viewModel := aController viewModel.
+	description := viewModel descriptionType.
+	description isReadOnly ifTrue: [
+		OPMcpToolError signal: 'The type of ' , (self describe: aController) , ' cannot be changed' ].
+	command := OPPropertyChangeCommand
+		           viewModel: viewModel
+		           selector: #type
+		           accessor: description accessor
+		           oldValue: (description accessor read: viewModel)
+		           newValue: (aNameOrNil ifNil: [ '' ]).
+	aController undoManager
+		ifNil: [ command execute ]
+		ifNotNil: [ :undoManager | undoManager execute: command ]
 ]
 
 { #category : 'private' }

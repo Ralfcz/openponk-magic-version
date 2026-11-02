@@ -379,6 +379,55 @@ OPMcpToolsTest >> testAssociationEndsAndGeneralizationSets [
 ]
 
 { #category : 'tests' }
+OPMcpToolsTest >> testAttributeTypeWorksLikeThePropertiesForm [
+	"Custom types live in the CommonTypes package of OpenPonk 5.1.1: only used ones stay there and an empty name clears the type, also after undo and redo."
+
+	| project person attribute model typeOf setType customTypes |
+	project := self newUmlProject.
+	person := self call: 'create_element' with: {
+			          ('project' -> project).
+			          ('type' -> 'Class').
+			          ('name' -> 'Osoba') }.
+	attribute := self call: 'create_element' with: {
+			             ('project' -> project).
+			             ('type' -> 'Attribute').
+			             ('parent' -> (person at: 'id')).
+			             ('name' -> 'born') }.
+	model := (tools openWorkbenches detect: [ :each | each project uuid asString = project ]) project models first.
+	typeOf := [ (model packagedElements detect: [ :each | each name = 'Osoba' ]) ownedAttributes first type ].
+	setType := [ :aName |
+	           self call: 'set_properties' with: {
+			           ('project' -> project).
+			           ('element' -> (attribute at: 'id')).
+			           ('properties' -> (Dictionary new
+				             at: 'type' put: aName;
+				             yourself)) } ].
+	customTypes := [
+	               (model packagedElements detect: [ :each | each name = 'CommonTypes' ] ifNone: [ nil ])
+		               ifNil: [ #(  ) ]
+		               ifNotNil: [ :package | package packagedElements collect: [ :each | each name ] ] ].
+
+	setType value: 'Foo'.
+	self assert: typeOf value name equals: 'Foo'.
+	setType value: 'Bar'.
+	self assert: typeOf value name equals: 'Bar'.
+	self deny: (customTypes value includes: 'Foo').
+	setType value: ''.
+	self assert: typeOf value isNil.
+	self deny: (customTypes value includes: 'Bar').
+	self deny: (customTypes value includes: '').
+
+	self call: 'undo' with: { ('project' -> project) }.
+	self assert: typeOf value name equals: 'Bar'.
+	self call: 'redo' with: { ('project' -> project) }.
+	self assert: typeOf value isNil.
+	self call: 'undo' with: { ('project' -> project) }.
+	self assert: (typeOf value isKindOf: OPUMLElement).
+	self assert: (setType value: nil) notNil.
+	self assert: typeOf value isNil
+]
+
+{ #category : 'tests' }
 OPMcpToolsTest >> testAutoLayout [
 
 	| project first second result |

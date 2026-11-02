@@ -1,12 +1,12 @@
 # OpenPonk Extras
 
-Rozšíření pro modelovací nástroj [OpenPonk](https://openponk.org) 5.1.0:
+Rozšíření pro modelovací nástroj [OpenPonk](https://openponk.org) 5.1.1:
 
 - **OntoUML asistent** pro výuku konceptuálního modelování. Kontroluje model už během kreslení a každou chybu vysvětlí: co je špatně, proč a jak to opravit. Stereotyp nastavíš jedním písmenem a prvky můžeš přidávat zápisem z textu.
 - **Vylepšení editoru** pro všechny notace: duplikace, uklizení překryvů, lepší zadávání multiplicit.
 - **MCP server**, přes který může model číst a upravovat AI asistent (Claude Code nebo jiný MCP klient).
 
-*English: extensions for OpenPonk 5.1.0. An OntoUML assistant (live model check with explanations and quick fixes, single-key stereotypes, adding elements from text), editor improvements and an MCP server. This documentation is in Czech. The assistant's texts are available in English as well (Settings > OpenPonk > OntoUML assistant language).*
+*English: extensions for OpenPonk 5.1.1. An OntoUML assistant (live model check with explanations and quick fixes, single-key stereotypes, adding elements from text), editor improvements and an MCP server. This documentation is in Czech. The assistant's texts are available in English as well (Settings > OpenPonk > OntoUML assistant language).*
 
 ## Přehled funkcí
 
@@ -40,7 +40,9 @@ Volitelný server na `http://127.0.0.1:47100/mcp`. AI asistent přes něj oteví
 
 ## Instalace
 
-**Potřebuješ:** OpenPonk **5.1.0**, build „All plugins“ ze stránky [OpenPonk/plugins v5.1.0](https://github.com/OpenPonk/plugins/releases/tag/v5.1.0). Archivy jsou pro Windows (`openponk-plugins-win-v5.1.0.zip`), Linux (`-linux-`) a macOS (`-mac-arm-` pro Apple Silicon, `-mac-intel-`). Jiné verze OpenPonku vyzkoušené nejsou. Rozšíření upravuje několik metod OpenPonku, takže s jinou verzí nemusí fungovat.
+**Potřebuješ:** OpenPonk **5.1.1**, build „All plugins“ ze stránky [OpenPonk/plugins v5.1.1](https://github.com/OpenPonk/plugins/releases/tag/v5.1.1). Archivy jsou pro Windows (`openponk-plugins-win-v5.1.1.zip`), Linux (`-linux-`) a macOS (`-mac-arm-` pro Apple Silicon, `-mac-intel-`). Funguje i s 5.1.0, jiné verze OpenPonku vyzkoušené nejsou. Rozšíření upravuje několik metod OpenPonku, takže s jinou verzí nemusí fungovat.
+
+**Pozor na formát projektů:** OpenPonk 5.1.1 otevře projekty z 5.1.0, ale `.opp` uložený v 5.1.1 už 5.1.0 neotevře (hlásí nepodporovanou verzi souboru). Když zadání nebo řešení sdílíš, všichni musí mít 5.1.1.
 
 1. Rozbal OpenPonk a spusť ho. Na macOS postupuj podle `README.txt` v archivu (aplikace není podepsaná). Na Windows je lepší rozbalit ho do krátké cesty, třeba `C:\openponk` (viz [Windows a Linux](#windows-a-linux)).
 2. V horní liště otevři **Browse > Playground**.
@@ -230,6 +232,7 @@ Ve složce tohoto repozitáře to není potřeba, je v ní `.mcp.json`. Jiné MC
 | `create_from_text` | Přidání prvků zápisem z okna Přidat z textu (s `dry_run` jen plán a chyby) |
 | `list_patterns`, `apply_pattern` | Vzory OntoUML jako text a jejich přidání do diagramu |
 
+- Typ atributu se nastavuje stejně jako v panelu vlastností: podle jména se najde třída, výčet, primitivní typ nebo běžný typ (Date, UUID…), jiné jméno vytvoří datový typ v balíčku `CommonTypes`. Prázdný řetězec nebo `null` typ zruší a vlastní typy, které už nikdo nepoužívá, se z balíčku odstraní.
 - Funguje se všemi notacemi, typy prvků se berou z palety diagramu. U OntoUML to jsou stereotypy (Kind, Role, Relator…) i vztahy (Mediation, Material, ComponentOf…).
 - Každá změna je pojmenovaný krok v undo OpenPonku („MCP: …“), takže jde vrátit i ručně přes ⌘Z / Ctrl+Z.
 - Chyba nástroje se vrátí klientovi jako chybový výsledek a v OpenPonku neotevře debugger.
@@ -256,7 +259,7 @@ docs/                         obrázky do README
 Složka `build/` není v gitu. Vytvoříš ji z oficiálního archivu:
 
 ```bash
-unzip openponk-plugins-mac-arm-v5.1.0.zip
+unzip openponk-plugins-mac-arm-v5.1.1.zip
 mv openponk-plugins-mac-arm build
 mkdir build/pristine
 cp build/image/openponk-plugins.image build/image/openponk-plugins.changes build/pristine/
@@ -268,7 +271,7 @@ tools/build.sh
 - `tools/build.sh` načte skupinu `all` (včetně testů), zkontroluje, že se nahrála každá třída, a zapne automatický start MCP serveru (`OPExtrasSetup afterBuild`). Image přepisuje, proto vyžaduje, aby vývojový OpenPonk neběžel.
 - Skripty volají VM na cestě `build/Pharo.app/Contents/MacOS/Pharo`, takže fungují jen na macOS. Na jiném systému stačí upravit cestu k VM, nebo načíst `src/` z Playgroundu: `Metacello new baseline: 'OpenPonkExtras'; repository: 'tonel:///cesta/k/repozitari/src'; load: 'all'`.
 - Testovací skripty pouštějí headless instanci s MCP serverem na portu 47998, aby nekolidovala s běžícím GUI na 47100. `tools/mcp_smoke.py` projde MCP relaci proti běžícímu OpenPonku.
-- Stav testů: všechny testy rozšíření procházejí. Z testů OpenPonku selhávají dva kvůli změněným popiskům generalizačních množin (viz níže).
+- Stav testů: všechny testy rozšíření procházejí, jen `OPOntoUMLCheckTest>>testPanelHidesForPlainUmlDiagrams` a `>>testLiveCheckRunsShortlyAfterEveryChange` občas selžou (každý asi v 5 % běhů, na 5.1.0 i 5.1.1). Z testů OpenPonku selhávají dva kvůli změněným popiskům generalizačních množin (viz níže).
 
 ### Úpravy mimo vlastní balíčky
 
@@ -287,6 +290,8 @@ Rozšíření přepisuje nebo doplňuje tyto metody OpenPonku a Specu. Při pře
 - Odznaky kreslí průhledný morph nad plátnem, ne tvary Roassalu. Proto nejsou mezi tvary diagramu, neukládají se, neexportují a mají stejnou velikost při každém zoomu.
 - Původní příkazy Model > Verification ukazují výsledky v Inspectoru a obarvují obrysy prvků. Tyto barvy se ukládají do `.opp`, proto je studentům lepší nedoporučovat.
 - Export PNG z OpenPonku po změně velikosti plátna občas vykreslí jen výřez: Roassal obnoví kreslicí plochu až během kreslení a OpenPonk mezitím posune kameru. MCP proto před exportem nastaví morphu cílovou velikost a plochu obnoví předem.
+- Od OpenPonku 5.1.1 má každý nový UML a OntoUML model balíček `CommonTypes` s běžnými datovými typy. V diagramu se nekreslí a kontrola OntoUML i přidávání z textu pracují jen s prvky nejvyšší úrovně modelu, takže je neovlivňuje. Testy proto nemohou čekat, že je nový model prázdný.
+- MCP nastavuje typ atributu přes accessor panelu vlastností (`descriptionType`), ne přes `typeNamed:` a objekt typu. Nepoužívané typy totiž OpenPonk z `CommonTypes` odebírá, takže undo a redo musí typ hledat podle jména.
 - Prázdný UML balíček bez profilů si OpenPonk přiřadí k pluginu „OntoUML UFO-A“. Projekt založený jako „UML Class Editor“ se proto v `list_projects` hlásí jako OntoUML (stejně se chová i GUI).
 
 ## Licence

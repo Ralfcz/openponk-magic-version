@@ -115,9 +115,10 @@ Studium -- Osoba : eviduje'.
 	self assert: (OPOntoUMLChecker problemsIn: diagramController model) isEmpty.
 
 	diagramController undoManager undo.
+	"Generalization sets stay and every new model of OpenPonk 5.1.1 has the CommonTypes package."
 	self
-		assert: (diagramController model packagedElements reject: [ :each | each isKindOf: OPUMLGeneralizationSet ])
-				asArray
+		assert: (diagramController model packagedElements reject: [ :each |
+				 (each isKindOf: OPUMLGeneralizationSet) or: [ each isKindOf: OPUMLPackage ] ]) asArray
 		equals: { person model }
 ]
 
