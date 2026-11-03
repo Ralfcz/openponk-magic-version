@@ -82,9 +82,11 @@ OPOntoUMLTextTest >> testImportChangesStereotypeOfExistingClass [
 { #category : 'tests - import' }
 OPOntoUMLTextTest >> testImportCreatesEverythingInOneUndoableStep [
 
-	| person import created study student ends set mediation |
+	| person before import created study student ends set mediation |
 	self openOntoUML.
 	person := self class: 'Kind' named: 'Osoba'.
+	"The new model already holds the CommonTypes package of data types."
+	before := diagramController model packagedElements asArray.
 	import := self import: (OPOntoUMLTexts at: #'template.relator.text') , '
 Dítě, Dospělý : Phase -> Osoba {dc}
 Studium -- Osoba : eviduje'.
@@ -115,11 +117,11 @@ Studium -- Osoba : eviduje'.
 	self assert: (OPOntoUMLChecker problemsIn: diagramController model) isEmpty.
 
 	diagramController undoManager undo.
-	"Generalization sets stay and every new model of OpenPonk 5.1.1 has the CommonTypes package."
+	"Generalization sets stay."
 	self
-		assert: (diagramController model packagedElements reject: [ :each |
-				 (each isKindOf: OPUMLGeneralizationSet) or: [ each isKindOf: OPUMLPackage ] ]) asArray
-		equals: { person model }
+		assert: (diagramController model packagedElements reject: [ :each | each isKindOf: OPUMLGeneralizationSet ])
+				asArray
+		equals: before
 ]
 
 { #category : 'tests - import' }
