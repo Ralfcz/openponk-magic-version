@@ -199,6 +199,25 @@ OPDiagramTidierTest >> testLabelsAndNodesGetOutOfTheWay [
 ]
 
 { #category : 'tests' }
+OPDiagramTidierTest >> testLabelOfAShortEdgeDoesNotCoverItsNodes [
+
+	| a b association label |
+	self openModel: (OPUMLPackage new name: 'P'; yourself).
+	a := self add: OPUmlClassController new at: 100 @ 100.
+	b := self add: OPUmlClassController new at: 240 @ 100.
+	association := self associationFrom: a to: b.
+	association model name: 'executed during'.
+	association modelChanged.
+	self assert: (self rectangleOf: b) left - (self rectangleOf: a) right < 60.
+
+	(OPDiagramTidier on: diagramController) tidy.
+
+	label := (association diagramElement ownedElements detect: [ :each |
+		          each isKindOf: OPUmlAssociationLabel ]) roassalShape encompassingRectangle.
+	self deny: ({ a. b } anySatisfy: [ :each | label intersects: (self rectangleOf: each) ])
+]
+
+{ #category : 'tests' }
 OPDiagramTidierTest >> testNodeAnEdgePassesCloseToIsMovedClearOfIt [
 
 	| a b c association tidier |

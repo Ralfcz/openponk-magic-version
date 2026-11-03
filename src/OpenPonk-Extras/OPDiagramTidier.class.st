@@ -2,7 +2,7 @@
 I tidy up a diagram without rearranging it: the user's (or a layouter's) placement is kept, only what overlaps is moved.
 
 0. Nodes whose centers are within #alignTolerance of each other across a row (or a column) are snapped onto one row (column), at the median of the group. A specific class is never put into the row of its general class.
-1. Top-level nodes that overlap or are closer than #gap are pushed apart (along the axis where they overlap less). Containers (nodes with positionable nodes inside) stay where they are, boundaries are ignored.
+1. Top-level nodes that overlap or are closer than #gap are pushed apart (along the axis where they overlap less). Two nodes joined by an edge with a label keep room for the label between them (see #gapBetween:and:). Containers (nodes with positionable nodes inside) stay where they are, boundaries are ignored.
 2. A node that an edge passes through or near (closer than #edgeClearance, not one of the edge's ends) is moved just far enough to the side of the edge. Steps 1 and 2 repeat, as moving a node also moves its own edges.
 3. Edges are routed anew: bends (also the user's) are removed from every edge between two different nodes, then a straight edge that crosses other edges gets bends around the obstacles, if the way around costs less than #crossingCost per crossing it saves and passes no node. Right-angled routes (an L, or a Z or U along a channel next to a node grown by #gap) are preferred; slanted segments cost #diagonalCost.
    If crossings remain, nodes are moved or swapped where that removes crossings (#moveCost per pixel moved, keeping #gap and #edgeClearance), the nodes are separated again and edges bent again. This result is kept only if it has fewer crossings than bending alone.
@@ -15,7 +15,8 @@ Class {
 	#superclass : 'Object',
 	#instVars : [
 		'diagramController',
-		'gap'
+		'gap',
+		'labelRooms'
 	],
 	#category : 'OpenPonk-Extras-Layout',
 	#package : 'OpenPonk-Extras',
@@ -203,6 +204,35 @@ OPDiagramTidier >> gap: aNumber [
 	gap := aNumber
 ]
 
+{ #category : 'private - nodes' }
+OPDiagramTidier >> gapBetween: aShape and: anotherShape [
+	"The gap (across a row @ along a column) two nodes keep. OpenPonk moves a label off the end nodes along its edge, so on an edge shorter than the label the label covers one of them; nodes joined by an edge with a label keep room for it."
+
+	| rooms |
+	labelRooms ifNil: [ ^ gap @ gap ].
+	rooms := labelRooms at: aShape ifAbsent: [ ^ gap @ gap ].
+	^ (rooms at: anotherShape ifAbsent: [ ^ gap @ gap ]) max: gap @ gap
+]
+
+{ #category : 'private - nodes' }
+OPDiagramTidier >> computeLabelRooms [
+	"For each pair of nodes joined by edges with labels that slide along the edge (names, stereotypes, generalization sets), the room the biggest of them needs between the nodes."
+
+	labelRooms := IdentityDictionary new.
+	self edgeLabelShapes do: [ :label |
+		| anchor line room |
+		anchor := label propertyAt: OPRSAnchorConstraint.
+		line := self edgeShapeOfLabel: label.
+		(anchor balance notNil and: [ line from ~~ line to ]) ifTrue: [
+			room := label encompassingRectangle extent + (2 * anchor minDistanceToLine abs + 4).
+			{
+				(line from -> line to).
+				(line to -> line from) } do: [ :pair |
+				| rooms |
+				rooms := labelRooms at: pair key ifAbsentPut: [ IdentityDictionary new ].
+				rooms at: pair value put: ((rooms at: pair value ifAbsent: [ 0 @ 0 ]) max: room) ] ] ]
+]
+
 { #category : 'initialization' }
 OPDiagramTidier >> initialize [
 
@@ -334,8 +364,8 @@ OPDiagramTidier >> separate: movableShapes from: fixedShapes [
 			aMoves := i <= movableShapes size.
 			bMoves := j <= movableShapes size.
 			(aMoves or: [ bMoves ]) ifTrue: [
-				ra := a encompassingRectangle expandBy: gap / 2.
-				rb := b encompassingRectangle expandBy: gap / 2.
+				ra := a encompassingRectangle expandBy: (self gapBetween: a and: b) / 2.
+				rb := b encompassingRectangle expandBy: (self gapBetween: a and: b) / 2.
 				dx := (ra right min: rb right) - (ra left max: rb left).
 				dy := (ra bottom min: rb bottom) - (ra top max: rb top).
 				(dx > 0 and: [ dy > 0 ]) ifTrue: [
@@ -937,6 +967,7 @@ OPDiagramTidier >> tidyLabeled: anUndoLabel after: aBlock [
 		         each roassalShape ].
 	all := movable , fixed.
 	labels := self edgeLabelShapes.
+	self computeLabelRooms.
 	snapshot := OPDiagramGeometrySnapshot onNodes: movable , labels.
 	waypoints := self waypointsOfEdges.
 	self straightenEdgesAmong: all.
